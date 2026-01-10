@@ -150,7 +150,7 @@
 </head>
 <body>
     <div id="terminal">
-        <div id="header">Terminal Chat v3.2 - Color Support | Use /color to change text color</div>
+        <div id="header">Terminal Chat v3.3 - Password Protected | Use /setpass to secure your room</div>
         <div id="messages"></div>
         <div id="input-line">
             <span id="prompt">guest@chat:~$</span>
@@ -170,6 +170,7 @@
         let userColor = localStorage.getItem('chat_color') || 'cyan';
         let roomId = new URLSearchParams(window.location.search).get('room') || generateRoomId();
         let connected = false;
+        let authenticated = false;
         
         // Set initial username
         prompt.textContent = `${username}@chat:~$`;
@@ -194,7 +195,7 @@
         }
         
         function sendMessage(user, text, type = 'user') {
-            if (connected) {
+            if (connected && authenticated) {
                 socket.emit('send-message', {
                     roomId,
                     user,
@@ -202,15 +203,42 @@
                     type,
                     color: type === 'user' ? userColor : null
                 });
+            } else if (!authenticated) {
+                addMessage('system', 'Please enter room password first', 'system');
+            }
+        }
+        
+        function joinRoom(password = '') {
+            if (connected) {
+                socket.emit('join-room', { roomId, password });
             }
         }
         
         // Socket events
         socket.on('connect', () => {
             connected = true;
-            socket.emit('join-room', roomId);
+            joinRoom(); // Try to join without password first
+            addMessage('system', `Connecting to room: ${roomId}`, 'system');
+        });
+        
+        socket.on('auth-success', () => {
+            authenticated = true;
             addMessage('system', `Connected to room: ${roomId}`, 'system');
             addMessage('system', `Share URL: ${window.location.href}`, 'system');
+        });
+        
+        socket.on('auth-failed', (message) => {
+            authenticated = false;
+            addMessage('system', `Access denied: ${message}`, 'system');
+            addMessage('system', 'Use /password <password> to enter room', 'system');
+        });
+        
+        socket.on('password-set', (message) => {
+            addMessage('system', message, 'system');
+        });
+        
+        socket.on('password-failed', (message) => {
+            addMessage('system', message, 'system');
         });
         
         socket.on('disconnect', () => {
@@ -270,15 +298,26 @@
                 } else {
                     addMessage('system', `Available colors: ${validColors.join(', ')}`, 'system');
                 }
+            } else if (text.startsWith('/password ')) {
+                const password = text.substring(10);
+                joinRoom(password);
+            } else if (text.startsWith('/setpass ')) {
+                const password = text.substring(9);
+                if (connected) {
+                    socket.emit('set-password', { roomId, password });
+                }
             } else if (text === '/clear') {
                 messages.innerHTML = '';
             } else if (text === '/room') {
                 addMessage('system', `Current room: ${roomId}`, 'system');
                 addMessage('system', `Share URL: ${window.location.href}`, 'system');
+                addMessage('system', `Authenticated: ${authenticated ? 'Yes' : 'No'}`, 'system');
             } else if (text === '/help') {
                 addMessage('system', 'Commands:', 'system');
                 addMessage('system', '/nick <name> - Change username', 'system');
                 addMessage('system', '/color <color> - Change text color', 'system');
+                addMessage('system', '/password <pass> - Enter room password', 'system');
+                addMessage('system', '/setpass <pass> - Set room password (empty rooms only)', 'system');
                 addMessage('system', '/clear - Clear chat', 'system');
                 addMessage('system', '/room - Show room info', 'system');
                 addMessage('system', 'Colors: green, cyan, yellow, magenta, red, blue, orange, purple', 'system');
@@ -301,7 +340,7 @@
         
         // Initial messages
         addMessage('system', 'Connecting to server...', 'system');
-        addMessage('system', 'Commands: /nick <name>, /color <color>, /clear, /room, /help', 'system');
+        addMessage('system', 'Commands: /nick <name>, /color <color>, /password <pass>, /help', 'system');
     </script>
 </body>
 </html>

@@ -7,8 +7,9 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Store messages in memory (resets on server restart)
+// Store messages and room passwords in memory
 const rooms = {};
+const roomPasswords = {};
 
 // Auto-cleanup messages older than 12 hours
 const CLEANUP_INTERVAL = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
@@ -26,10 +27,11 @@ function cleanupOldMessages() {
                 console.log(`Cleaned up ${originalCount - rooms[roomId].length} old messages from room ${roomId}`);
             }
             
-            // Remove empty rooms
+            // Remove empty rooms and their passwords
             if (rooms[roomId].length === 0) {
                 delete rooms[roomId];
-                console.log(`Removed empty room ${roomId}`);
+                delete roomPasswords[roomId];
+                console.log(`Removed empty room ${roomId} and its password`);
             }
         }
     });
@@ -45,7 +47,17 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
     
-    socket.on('join-room', (roomId) => {
+    socket.on('join-room', (data) => {
+        const { roomId, password } = data;
+        
+        // Check if room has password
+        if (roomPasswords[roomId]) {
+            if (password !== roomPasswords[roomId]) {
+                socket.emit('auth-failed', 'Incorrect password');
+                return;
+            }
+        }
+        
         socket.join(roomId);
         
         // Send existing messages to new user (only messages from last 12 hours)
@@ -56,7 +68,21 @@ io.on('connection', (socket) => {
             socket.emit('load-messages', recentMessages);
         }
         
+        socket.emit('auth-success');
         console.log(`User ${socket.id} joined room ${roomId}`);
+    });
+    
+    socket.on('set-password', (data) => {
+        const { roomId, password } = data;
+        
+        // Only allow setting password if room is empty or user is first
+        if (!rooms[roomId] || rooms[roomId].length === 0) {
+            roomPasswords[roomId] = password;
+            socket.emit('password-set', 'Room password set successfully');
+            console.log(`Password set for room ${roomId}`);
+        } else {
+            socket.emit('password-failed', 'Cannot set password - room already has messages');
+        }
     });
     
     socket.on('send-message', (data) => {
