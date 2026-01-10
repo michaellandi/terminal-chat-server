@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Chat</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #terminal {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        #header {
+            color: #00ff00;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        .message {
+            margin: 5px 0;
+            word-wrap: break-word;
+        }
+        .user { color: #00ffff; }
+        .system { color: #ffff00; }
+        #input-line {
+            display: flex;
+            align-items: center;
+        }
+        #prompt { color: #00ff00; }
+        #input {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: inherit;
+            font-size: inherit;
+            outline: none;
+            flex: 1;
+            margin-left: 5px;
+        }
+        .cursor {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        .status {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal">
+        <div id="header">Terminal Chat v3.0 - Real-time messaging | Share this URL to invite friends</div>
+        <div id="messages"></div>
+        <div id="input-line">
+            <span id="prompt">guest@chat:~$</span>
+            <input type="text" id="input" placeholder="Type message..." autofocus>
+            <span class="cursor">_</span>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const messages = document.getElementById('messages');
+        const input = document.getElementById('input');
+        const prompt = document.getElementById('prompt');
+        
+        let username = localStorage.getItem('chat_username') || 'guest';
+        let roomId = new URLSearchParams(window.location.search).get('room') || generateRoomId();
+        let connected = false;
+        
+        // Set initial username
+        prompt.textContent = `${username}@chat:~$`;
+        
+        function generateRoomId() {
+            const id = Math.random().toString(36).substring(2, 8);
+            window.history.replaceState({}, '', `?room=${id}`);
+            return id;
+        }
+        
+        function addMessage(user, text, type = 'user') {
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.innerHTML = `<span style="color: #ff6b6b">[${new Date().toLocaleTimeString()}]</span> <span style="color: #4ecdc4">${user}:</span> ${text}`;
+            messages.appendChild(msg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        
+        function sendMessage(user, text, type = 'user') {
+            if (connected) {
+                socket.emit('send-message', {
+                    roomId,
+                    user,
+                    text,
+                    type
+                });
+            }
+        }
+        
+        // Socket events
+        socket.on('connect', () => {
+            connected = true;
+            socket.emit('join-room', roomId);
+            addMessage('system', `Connected to room: ${roomId}`, 'system');
+            addMessage('system', `Share URL: ${window.location.href}`, 'system');
+        });
+        
+        socket.on('disconnect', () => {
+            connected = false;
+            addMessage('system', 'Disconnected from server', 'status');
+        });
+        
+        socket.on('load-messages', (roomMessages) => {
+            roomMessages.forEach(msg => {
+                addMessage(msg.user, msg.text, msg.type);
+            });
+        });
+        
+        socket.on('new-message', (message) => {
+            addMessage(message.user, message.text, message.type);
+        });
+        
+        // Input handling
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && input.value.trim()) {
+                const text = input.value.trim();
+                
+                if (text.startsWith('/nick ')) {
+                    username = text.substring(6);
+                    localStorage.setItem('chat_username', username);
+                    prompt.textContent = `${username}@chat:~$`;
+                    sendMessage('system', `${username} joined the chat`, 'system');
+                } else if (text === '/clear') {
+                    messages.innerHTML = '';
+                } else if (text === '/room') {
+                    addMessage('system', `Current room: ${roomId}`, 'system');
+                    addMessage('system', `Share URL: ${window.location.href}`, 'system');
+                } else if (text === '/help') {
+                    addMessage('system', 'Commands: /nick <name>, /clear, /room, /help', 'system');
+                } else {
+                    sendMessage(username, text);
+                }
+                
+                input.value = '';
+            }
+        });
+        
+        // Initial messages
+        addMessage('system', 'Connecting to server...', 'system');
+        addMessage('system', 'Commands: /nick <name>, /clear, /room, /help', 'system');
+    </script>
+</body>
+</html>
