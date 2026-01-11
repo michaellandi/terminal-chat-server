@@ -12,10 +12,10 @@
             font-family: 'Courier New', monospace;
             height: 100vh;
             overflow: hidden;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
         }
         #terminal {
             height: 100vh;
@@ -40,6 +40,14 @@
             margin: 3px 0;
             word-wrap: break-word;
             font-size: 14px;
+            cursor: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+        .message:hover {
+            background: rgba(255, 255, 255, 0.05);
         }
         .user { color: #00ffff; }
         .system { color: #ffff00; }
@@ -163,7 +171,7 @@
 </head>
 <body>
     <div id="terminal">
-        <div id="header">Terminal Chat v3.4 - Clickable Links | URLs are automatically clickable</div>
+        <div id="header">Terminal Chat v3.5 - Copy Support | Select text or use /copy command</div>
         <div id="messages"></div>
         <div id="input-line">
             <span id="prompt">guest@chat:~$</span>
@@ -329,17 +337,48 @@
                 addMessage('system', `Current room: ${roomId}`, 'system');
                 addMessage('system', `Share URL: ${window.location.href}`, 'system');
                 addMessage('system', `Authenticated: ${authenticated ? 'Yes' : 'No'}`, 'system');
+            } else if (text === '/copy') {
+                copyAllMessages();
             } else if (text === '/help') {
                 addMessage('system', 'Commands:', 'system');
                 addMessage('system', '/nick <name> - Change username', 'system');
                 addMessage('system', '/color <color> - Change text color', 'system');
                 addMessage('system', '/password <pass> - Enter room password', 'system');
                 addMessage('system', '/setpass <pass> - Set room password (empty rooms only)', 'system');
+                addMessage('system', '/copy - Copy all chat messages', 'system');
                 addMessage('system', '/clear - Clear chat', 'system');
                 addMessage('system', '/room - Show room info', 'system');
                 addMessage('system', 'Colors: green, cyan, yellow, magenta, red, blue, orange, purple', 'system');
             } else {
                 sendMessage(username, text);
+            }
+        }
+        
+        function copyAllMessages() {
+            const messageElements = messages.querySelectorAll('.message');
+            let chatText = '';
+            
+            messageElements.forEach(msg => {
+                // Extract text content without HTML tags
+                const textContent = msg.textContent || msg.innerText;
+                chatText += textContent + '\n';
+            });
+            
+            if (chatText.trim()) {
+                navigator.clipboard.writeText(chatText.trim()).then(() => {
+                    addMessage('system', 'Chat copied to clipboard!', 'system');
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = chatText.trim();
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    addMessage('system', 'Chat copied to clipboard!', 'system');
+                });
+            } else {
+                addMessage('system', 'No messages to copy', 'system');
             }
         }
         
@@ -357,7 +396,7 @@
         
         // Initial messages
         addMessage('system', 'Connecting to server...', 'system');
-        addMessage('system', 'Commands: /nick <name>, /color <color>, /password <pass>, /help', 'system');
+        addMessage('system', 'Commands: /nick <name>, /color <color>, /copy, /help', 'system');
     </script>
 </body>
 </html>
