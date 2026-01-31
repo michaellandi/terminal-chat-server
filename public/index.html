@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Terminal Chat</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -10,14 +10,18 @@
             background: #000;
             color: #00ff00;
             font-family: 'Courier New', monospace;
+            height: 100vh;
             height: 100dvh;
             overflow: hidden;
             -webkit-user-select: text;
             -moz-user-select: text;
             -ms-user-select: text;
             user-select: text;
+            position: fixed;
+            width: 100%;
         }
         #terminal {
+            height: 100vh;
             height: 100dvh;
             display: flex;
             flex-direction: column;
@@ -369,7 +373,10 @@
         
         // Input handling with mobile support
         input.addEventListener('focus', () => {
-            setTimeout(() => messages.scrollTop = messages.scrollHeight, 300);
+            setTimeout(() => {
+                messages.scrollTop = messages.scrollHeight;
+                window.scrollTo(0, 0);
+            }, 300);
         });
         
         input.addEventListener('keypress', (e) => {
