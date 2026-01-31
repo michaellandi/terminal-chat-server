@@ -105,6 +105,7 @@
         emojiPicker.innerHTML = emojis.map(e => `<span onclick="insertEmoji('${e}')">${e}</span>`).join('');
         
         let messageReactions = JSON.parse(localStorage.getItem('reactions_' + location.search) || '{}');
+        let userColor = localStorage.getItem('chat_color') || '#00ff00';
         
         let username = localStorage.getItem('chat_username') || 'guest';
         let roomId = new URLSearchParams(window.location.search).get('room') || generateRoomId();
@@ -238,10 +239,26 @@
                     addMessage('system', `Current room: ${roomId}`, 'system');
                     addMessage('system', `Share URL: ${window.location.href}`, 'system');
                 } else if (text === '/help') {
-                    addMessage('system', 'Commands: /nick <name>, /clear, /room, /emoji, /help', 'system');
-                    addMessage('system', 'Tap a message to add reaction. Emojis work in messages.', 'system');
+                    addMessage('system', 'Commands:', 'system');
+                    addMessage('system', '  /nick <name> - Set your username', 'system');
+                    addMessage('system', '  /color <hex> - Set message color (e.g. /color #ff0000)', 'system');
+                    addMessage('system', '  /emoji - Toggle emoji picker', 'system');
+                    addMessage('system', '  /room - Show room info and share URL', 'system');
+                    addMessage('system', '  /clear - Clear chat display', 'system');
+                    addMessage('system', '  /delete - Delete all messages in room', 'system');
+                    addMessage('system', 'Tap any message to add a reaction.', 'system');
                 } else if (text === '/emoji') {
                     emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
+                } else if (text.startsWith('/color ')) {
+                    userColor = text.substring(7).trim();
+                    localStorage.setItem('chat_color', userColor);
+                    addMessage('system', `Message color set to ${userColor}`, 'system');
+                } else if (text === '/delete') {
+                    localStorage.removeItem(`chat_${roomId}`);
+                    localStorage.removeItem('reactions_' + location.search);
+                    messageReactions = {};
+                    messages.innerHTML = '';
+                    addMessage('system', 'Chat deleted.', 'system');
                 } else {
                     await sendMessage(username, text);
                 }
