@@ -119,14 +119,15 @@
             return id;
         }
         
-        function addMessage(user, text, type = 'user', time = Date.now(), msgId = null) {
+        function addMessage(user, text, type = 'user', time = Date.now(), msgId = null, color = null) {
             const id = msgId || 'msg_' + time;
             const msg = document.createElement('div');
             msg.className = `message ${type}`;
             msg.dataset.id = id;
             const reactions = messageReactions[id] || [];
             const reactionsHtml = reactions.length ? `<span class="reactions">${reactions.join('')}</span>` : '';
-            msg.innerHTML = `<span style="color: #ff6b6b">[${new Date(time).toLocaleTimeString()}]</span> <span style="color: #4ecdc4">${user}:</span> ${text}${reactionsHtml}`;
+            const textColor = color || '#00ff00';
+            msg.innerHTML = `<span style="color: #ff6b6b">[${new Date(time).toLocaleTimeString()}]</span> <span style="color: #4ecdc4">${user}:</span> <span style="color:${textColor}">${text}</span>${reactionsHtml}`;
             msg.onclick = () => showReactionPicker(id);
             messages.appendChild(msg);
             messages.scrollTop = messages.scrollHeight;
@@ -166,14 +167,15 @@
             input.focus();
         }
         
-        function saveToLocal(user, text, type = 'user', time = Date.now()) {
+        function saveToLocal(user, text, type = 'user', time = Date.now(), color = null) {
             const chatKey = `chat_${roomId}`;
             let chatData = JSON.parse(localStorage.getItem(chatKey) || '[]');
             chatData.push({
                 user,
                 text,
                 type,
-                time
+                time,
+                color
             });
             // Keep only last 50 messages
             if (chatData.length > 50) {
@@ -186,18 +188,19 @@
             const chatKey = `chat_${roomId}`;
             const chatData = JSON.parse(localStorage.getItem(chatKey) || '[]');
             chatData.forEach(msg => {
-                addMessage(msg.user, msg.text, msg.type, msg.time);
+                addMessage(msg.user, msg.text, msg.type, msg.time, 'msg_' + msg.time, msg.color);
             });
         }
         
         async function sendMessage(user, text, type = 'user') {
             const time = Date.now();
+            const color = type === 'user' ? userColor : null;
             
             // Show message immediately
-            addMessage(user, text, type, time);
+            addMessage(user, text, type, time, null, color);
             
             // Save locally
-            saveToLocal(user, text, type, time);
+            saveToLocal(user, text, type, time, color);
             
             // Try to broadcast via simple HTTP request (for demo purposes)
             try {
