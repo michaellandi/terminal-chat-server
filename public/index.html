@@ -229,7 +229,12 @@
         .image-toggle.hidden {
             display: none;
         }
-        #image-btn {
+        /* Attachment button wrapper */
+        #attach-wrapper {
+            position: relative;
+            margin-right: 5px;
+        }
+        #attach-btn {
             background: transparent;
             border: 1px solid #00ff00;
             color: #00ff00;
@@ -237,12 +242,44 @@
             font-size: 14px;
             cursor: pointer;
             padding: 2px 8px;
-            margin-right: 5px;
             border-radius: 3px;
         }
-        #image-btn:hover {
+        #attach-btn:hover {
             background: #00ff00;
             color: #000;
+        }
+        #attach-menu {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 0;
+            background: #111;
+            border: 1px solid #00ff00;
+            border-radius: 4px;
+            z-index: 200;
+            min-width: 160px;
+        }
+        #attach-menu.open {
+            display: flex;
+            flex-direction: column;
+        }
+        .attach-option {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #333;
+            color: #00ff00;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 8px 12px;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .attach-option:last-child {
+            border-bottom: none;
+        }
+        .attach-option:hover {
+            background: rgba(0, 255, 0, 0.15);
         }
         #image-input, #gallery-input {
             display: none;
@@ -286,32 +323,15 @@
                 max-width: 200px;
                 max-height: 150px;
             }
-            #image-btn, #voice-btn {
+            #attach-btn {
                 font-size: 12px;
                 padding: 2px 6px;
             }
         }
         /* Voice note styling */
-        #voice-btn {
-            background: transparent;
-            border: 1px solid #00ff00;
-            color: #00ff00;
-            font-family: inherit;
-            font-size: 14px;
-            cursor: pointer;
-            padding: 2px 8px;
-            margin-right: 5px;
-            border-radius: 3px;
-            transition: all 0.2s;
-        }
-        #voice-btn:hover {
-            background: #00ff00;
-            color: #000;
-        }
         #voice-btn.recording {
-            background: #ff6b6b;
-            border-color: #ff6b6b;
-            color: #000;
+            background: #ff6b6b !important;
+            color: #000 !important;
             animation: pulse 1s infinite;
         }
         @keyframes pulse {
@@ -360,27 +380,6 @@
         #recording-indicator.active {
             display: inline;
         }
-        #gallery-btn {
-            background: transparent;
-            border: 1px solid #00ff00;
-            color: #00ff00;
-            font-family: inherit;
-            font-size: 14px;
-            cursor: pointer;
-            padding: 2px 8px;
-            margin-right: 5px;
-            border-radius: 3px;
-        }
-        #gallery-btn:hover {
-            background: #00ff00;
-            color: #000;
-        }
-        @media (max-width: 768px) {
-            #gallery-btn {
-                font-size: 12px;
-                padding: 2px 6px;
-            }
-        }
         /* Custom tooltips */
         .tooltip-btn {
             position: relative;
@@ -415,11 +414,16 @@
         <div id="messages"></div>
         <div id="emoji-picker"></div>
         <div id="input-line">
-            <button id="image-btn" class="tooltip-btn" data-tooltip="Take photo">📷</button>
+            <div id="attach-wrapper">
+                <button id="attach-btn" class="tooltip-btn" data-tooltip="Attach media">📎</button>
+                <div id="attach-menu">
+                    <button id="image-btn" class="attach-option">📷 Take Photo</button>
+                    <button id="gallery-btn" class="attach-option">🖼️ Gallery</button>
+                    <button id="voice-btn" class="attach-option">🎤 Voice Note</button>
+                </div>
+            </div>
             <input type="file" id="image-input" accept="image/jpeg,image/png,image/gif,image/webp" capture="environment">
-            <button id="gallery-btn" class="tooltip-btn" data-tooltip="Choose from gallery">🖼️</button>
             <input type="file" id="gallery-input" accept="image/jpeg,image/png,image/gif,image/webp">
-            <button id="voice-btn" class="tooltip-btn" data-tooltip="Record voice note">🎤</button>
             <span id="recording-indicator">REC</span>
             <span id="prompt">guest@chat:~$</span>
             <textarea id="input" placeholder="Type message..." autofocus rows="1"></textarea>
@@ -437,6 +441,8 @@
         const input = document.getElementById('input');
         const prompt = document.getElementById('prompt');
         const emojiPicker = document.getElementById('emoji-picker');
+        const attachBtn = document.getElementById('attach-btn');
+        const attachMenu = document.getElementById('attach-menu');
         const imageBtn = document.getElementById('image-btn');
         const imageInput = document.getElementById('image-input');
         const galleryBtn = document.getElementById('gallery-btn');
@@ -650,14 +656,26 @@
             inputElement.value = '';
         }
 
-        imageBtn.onclick = () => imageInput.click();
-        galleryBtn.onclick = () => galleryInput.click();
+        // Attachment menu toggle
+        attachBtn.onclick = (e) => {
+            e.stopPropagation();
+            attachMenu.classList.toggle('open');
+        };
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#attach-wrapper')) {
+                attachMenu.classList.remove('open');
+            }
+        });
+
+        imageBtn.onclick = () => { attachMenu.classList.remove('open'); imageInput.click(); };
+        galleryBtn.onclick = () => { attachMenu.classList.remove('open'); galleryInput.click(); };
 
         imageInput.onchange = (e) => handleImageUpload(e.target.files[0], imageInput);
         galleryInput.onchange = (e) => handleImageUpload(e.target.files[0], galleryInput);
 
         // Voice recording handling
         voiceBtn.onclick = async () => {
+            attachMenu.classList.remove('open');
             if (isRecording) {
                 stopRecording();
             } else {
