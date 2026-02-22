@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-001",
+  "type": "fix",
+  "description": "Fix two GIF-related bugs in public/index.html: (1) GIF search input loses focus because the main chat input's blur handler steals focus back, making it impossible to type in the GIF picker search box. (2) /gif <search term> auto-sends the first result instead of opening the picker with pre-populated search results for the user to choose from.",
+  "status": "in_progress",
+  "steps": [
+    "In public/index.html, fix Bug 1 (search input unfocusable): Modify the input blur event handler (around line 1293) to NOT refocus the main chat input when the GIF picker is open. The current code is: `input.addEventListener('blur', () => { setTimeout(() => input.focus(), 100); });` — this unconditionally refocuses #input after 100ms, which steals focus from #gif-search-input. Fix this by checking if the GIF picker is open (gifPicker.classList.contains('open')) before refocusing. Also check if the active element is the gif search input. The condition should skip refocusing when document.activeElement is gifSearchInput or the gif picker is open.",
+    "In public/index.html, fix Bug 2 (/gif <search> auto-sends): In the handleMessage function (around line 1359-1382), change the else branch for `/gif <search term>` (lines 1370-1381) so instead of fetching limit=1 and auto-sending, it opens the GIF picker, pre-populates the search input with the query text, and calls loadGifs(query) to show results for user selection. The new behavior should: (a) open the gif picker via gifPicker.classList.add('open'), (b) set gifSearchInput.value = query, (c) call gifSearchInput.focus(), (d) call loadGifs(query) to load results."
+  ],
+  "acceptance_criteria": [
+    "When GIF picker is open (via /gif or the UI button), the user can click on the search input and type to search for GIFs without focus being stolen back to the chat input",
+    "When user types /gif happy and presses Enter, the GIF picker opens with 'happy' pre-filled in the search input and results for 'happy' displayed, allowing the user to pick which GIF to send",
+    "The /gif command with no arguments still opens the GIF picker with trending GIFs as before",
+    "The GIF picker button in the attach menu still works correctly",
+    "Clicking a GIF in the picker still sends it and closes the picker"
+  ],
+  "verification": [
+    "Run: cd /projects/sandbox/terminal-chat-server && node -c public/index.html (syntax check)",
+    "Run: cd /projects/sandbox/terminal-chat-server && node -e \"const fs = require('fs'); const html = fs.readFileSync('public/index.html', 'utf8'); if (html.includes('limit=1')) { console.log('FAIL: Still contains limit=1 auto-send logic'); process.exit(1); } else { console.log('PASS: No auto-send logic'); }\"",
+    "Run: cd /projects/sandbox/terminal-chat-server && node -e \"const fs = require('fs'); const html = fs.readFileSync('public/index.html', 'utf8'); if (html.includes('gifPicker.classList.contains') || html.includes('gifSearchInput') && html.includes('activeElement')) { console.log('PASS: Blur handler has GIF picker check'); } else { console.log('FAIL: Blur handler missing GIF picker check'); process.exit(1); }\""
+  ],
+  "findings": ""
+}
