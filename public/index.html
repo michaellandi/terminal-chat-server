@@ -1292,7 +1292,11 @@
         // Handle form submission on mobile
         input.addEventListener('blur', () => {
             // Small delay to allow for button clicks
-            setTimeout(() => input.focus(), 100);
+            setTimeout(() => {
+                if (!gifPicker.classList.contains('open') && document.activeElement !== gifSearchInput) {
+                    input.focus();
+                }
+            }, 100);
         });
         
         async function handleMessage(text) {
@@ -1367,18 +1371,11 @@
                         loadGifs('');
                     }
                 } else {
-                    // Search and send first result
-                    try {
-                        const response = await fetch(`/api/gifs?q=${encodeURIComponent(query)}&limit=1`);
-                        const data = await response.json();
-                        if (data.gifs && data.gifs.length > 0) {
-                            sendMessage(username, '', 'user', data.gifs[0].url);
-                        } else {
-                            addMessage('system', `No GIFs found for "${query}"`, 'system');
-                        }
-                    } catch (error) {
-                        addMessage('system', 'Failed to search GIFs', 'system');
-                    }
+                    // Open GIF picker with search results for user to choose
+                    gifPicker.classList.add('open');
+                    gifSearchInput.value = query;
+                    gifSearchInput.focus();
+                    loadGifs(query);
                 }
             } else {
                 sendMessage(username, text);
