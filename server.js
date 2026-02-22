@@ -172,6 +172,66 @@ app.post('/upload-video', videoUpload.single('video'), (req, res) => {
     res.json({ url: videoUrl });
 });
 
+// GIF search proxy (using Tenor API)
+app.get('/api/gifs', async (req, res) => {
+    try {
+        const query = req.query.q || '';
+        const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+        const apiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
+        
+        let url;
+        if (query) {
+            url = `https://tenor.googleapis.com/v2/search?key=${apiKey}&q=${encodeURIComponent(query)}&limit=${limit}&media_filter=gif,tinygif`;
+        } else {
+            url = `https://tenor.googleapis.com/v2/featured?key=${apiKey}&limit=${limit}&media_filter=gif,tinygif`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        const gifs = (data.results || []).map(gif => ({
+            id: gif.id,
+            title: gif.content_description || gif.title || '',
+            url: (gif.media_formats.gif && gif.media_formats.gif.url) || '',
+            preview: (gif.media_formats.tinygif && gif.media_formats.tinygif.url) || (gif.media_formats.gif && gif.media_formats.gif.url) || '',
+            width: gif.media_formats.gif ? gif.media_formats.gif.dims[0] : 0,
+            height: gif.media_formats.gif ? gif.media_formats.gif.dims[1] : 0,
+            original: (gif.media_formats.gif && gif.media_formats.gif.url) || ''
+        }));
+        
+        res.json({ gifs });
+    } catch (error) {
+        console.error('GIF search error:', error);
+        res.status(500).json({ error: 'Failed to search GIFs' });
+    }
+});
+
+app.get('/api/gifs/trending', async (req, res) => {
+    try {
+        const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+        const apiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
+        const url = `https://tenor.googleapis.com/v2/featured?key=${apiKey}&limit=${limit}&media_filter=gif,tinygif`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        const gifs = (data.results || []).map(gif => ({
+            id: gif.id,
+            title: gif.content_description || gif.title || '',
+            url: (gif.media_formats.gif && gif.media_formats.gif.url) || '',
+            preview: (gif.media_formats.tinygif && gif.media_formats.tinygif.url) || (gif.media_formats.gif && gif.media_formats.gif.url) || '',
+            width: gif.media_formats.gif ? gif.media_formats.gif.dims[0] : 0,
+            height: gif.media_formats.gif ? gif.media_formats.gif.dims[1] : 0,
+            original: (gif.media_formats.gif && gif.media_formats.gif.url) || ''
+        }));
+        
+        res.json({ gifs });
+    } catch (error) {
+        console.error('GIF trending error:', error);
+        res.status(500).json({ error: 'Failed to fetch trending GIFs' });
+    }
+});
+
 // Error handling for multer
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
