@@ -172,31 +172,31 @@ app.post('/upload-video', videoUpload.single('video'), (req, res) => {
     res.json({ url: videoUrl });
 });
 
-// GIF search proxy (using GIPHY public beta API)
+// GIF search proxy (using Tenor API)
 app.get('/api/gifs', async (req, res) => {
     try {
         const query = req.query.q || '';
         const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-        const apiKey = 'dc6zaTOxFJmzC'; // GIPHY public beta key
+        const apiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
         
         let url;
         if (query) {
-            url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=${limit}&rating=g`;
+            url = `https://tenor.googleapis.com/v2/search?key=${apiKey}&q=${encodeURIComponent(query)}&limit=${limit}&media_filter=gif,tinygif`;
         } else {
-            url = `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=${limit}&rating=g`;
+            url = `https://tenor.googleapis.com/v2/featured?key=${apiKey}&limit=${limit}&media_filter=gif,tinygif`;
         }
         
         const response = await fetch(url);
         const data = await response.json();
         
-        const gifs = data.data.map(gif => ({
+        const gifs = (data.results || []).map(gif => ({
             id: gif.id,
-            title: gif.title,
-            url: gif.images.fixed_height.url,
-            preview: gif.images.fixed_height_small.url || gif.images.fixed_height.url,
-            width: gif.images.fixed_height.width,
-            height: gif.images.fixed_height.height,
-            original: gif.images.original.url
+            title: gif.content_description || gif.title || '',
+            url: (gif.media_formats.gif && gif.media_formats.gif.url) || '',
+            preview: (gif.media_formats.tinygif && gif.media_formats.tinygif.url) || (gif.media_formats.gif && gif.media_formats.gif.url) || '',
+            width: gif.media_formats.gif ? gif.media_formats.gif.dims[0] : 0,
+            height: gif.media_formats.gif ? gif.media_formats.gif.dims[1] : 0,
+            original: (gif.media_formats.gif && gif.media_formats.gif.url) || ''
         }));
         
         res.json({ gifs });
@@ -209,20 +209,20 @@ app.get('/api/gifs', async (req, res) => {
 app.get('/api/gifs/trending', async (req, res) => {
     try {
         const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-        const apiKey = 'dc6zaTOxFJmzC';
-        const url = `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=${limit}&rating=g`;
+        const apiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
+        const url = `https://tenor.googleapis.com/v2/featured?key=${apiKey}&limit=${limit}&media_filter=gif,tinygif`;
         
         const response = await fetch(url);
         const data = await response.json();
         
-        const gifs = data.data.map(gif => ({
+        const gifs = (data.results || []).map(gif => ({
             id: gif.id,
-            title: gif.title,
-            url: gif.images.fixed_height.url,
-            preview: gif.images.fixed_height_small.url || gif.images.fixed_height.url,
-            width: gif.images.fixed_height.width,
-            height: gif.images.fixed_height.height,
-            original: gif.images.original.url
+            title: gif.content_description || gif.title || '',
+            url: (gif.media_formats.gif && gif.media_formats.gif.url) || '',
+            preview: (gif.media_formats.tinygif && gif.media_formats.tinygif.url) || (gif.media_formats.gif && gif.media_formats.gif.url) || '',
+            width: gif.media_formats.gif ? gif.media_formats.gif.dims[0] : 0,
+            height: gif.media_formats.gif ? gif.media_formats.gif.dims[1] : 0,
+            original: (gif.media_formats.gif && gif.media_formats.gif.url) || ''
         }));
         
         res.json({ gifs });
