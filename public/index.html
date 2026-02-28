@@ -539,6 +539,7 @@
             padding: 6px;
             overflow-y: auto;
             flex: 1;
+            min-height: 0;
         }
         .gif-result-item {
             cursor: pointer;
@@ -546,7 +547,7 @@
             border-radius: 3px;
             overflow: hidden;
             position: relative;
-            aspect-ratio: 16/9;
+            aspect-ratio: 4/3;
         }
         .gif-result-item:hover {
             border-color: #00ff00;
@@ -604,6 +605,13 @@
                 max-width: none;
                 left: 5px;
                 right: 5px;
+                max-height: 60vh;
+            }
+            #gif-results {
+                grid-template-columns: 1fr;
+            }
+            .gif-result-item {
+                aspect-ratio: 16/9;
             }
         }
         /* Reply quote block inside a message */
