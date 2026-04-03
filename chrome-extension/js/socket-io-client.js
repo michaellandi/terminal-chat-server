@@ -5,7 +5,6 @@ export class SocketIOClient {
   constructor() {
     this._handlers = {};
     this.ws = null;
-    this._pingTimer = null;
     this.connected = false;
     this.id = null;
   }
@@ -19,7 +18,6 @@ export class SocketIOClient {
     this.ws.onmessage = ({ data }) => this._onMessage(data);
     this.ws.onclose = () => {
       this.connected = false;
-      this._clearPing();
       this._emit('disconnect');
     };
     this.ws.onerror = () => {
@@ -31,10 +29,8 @@ export class SocketIOClient {
     const eioType = data[0];
 
     if (eioType === '0') {
-      // Engine.io OPEN — parse ping interval then send Socket.io CONNECT
-      const info = JSON.parse(data.slice(1));
-      this._startPing(info.pingInterval || 25000);
-      this.ws.send('40'); // Socket.io: connect to default namespace
+      // Engine.io OPEN — send Socket.io CONNECT to default namespace
+      this.ws.send('40');
       return;
     }
 
@@ -86,17 +82,6 @@ export class SocketIOClient {
     }
   }
 
-  _startPing(ms) {
-    this._clearPing();
-    this._pingTimer = setInterval(() => {
-      if (this.ws?.readyState === WebSocket.OPEN) this.ws.send('2');
-    }, ms);
-  }
-
-  _clearPing() {
-    if (this._pingTimer) { clearInterval(this._pingTimer); this._pingTimer = null; }
-  }
-
   emit(event, data) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(`42${JSON.stringify([event, data])}`);
@@ -121,7 +106,6 @@ export class SocketIOClient {
   }
 
   disconnect() {
-    this._clearPing();
     this.ws?.close();
     this.connected = false;
     this.id = null;
