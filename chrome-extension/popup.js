@@ -131,6 +131,7 @@ function showChatScreen() {
   chatScreen.style.display    = 'flex';
   roomLabel.textContent = `ROOM: ${state.roomId.toUpperCase()}`;
   setStatus('connected');
+  messagesEl.scrollTop = messagesEl.scrollHeight;
   msgInput.focus();
 }
 
